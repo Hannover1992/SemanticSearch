@@ -33,7 +33,7 @@ embeddings = create_embedding()
 
 db = Chroma(persist_directory='db', embedding_function=embeddings)
 
-st.title('🦜🔗 Semantic Search with OpenAI and Streamlit')
+st.title('Semantic Search with OpenAI and Streamlit')
 
 # Create a text input box for the user
 prompt = st.text_input('Enter your search query')
