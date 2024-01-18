@@ -87,3 +87,36 @@ if __name__ == '__main__':
     # Store the vectors
     store = Chroma.from_documents(docs, embeddings, persist_directory='db')
     store.persist()
+# Semantic Search Engine for Academic Papers
+
+This project is a Semantic Search Engine for Academic Papers. It extracts text and metadata from PDF files of academic papers, validates the metadata, splits the text into chunks, and creates embeddings for each chunk. The embeddings are then stored in a database for semantic search.
+
+## How to Run
+
+1. Ensure that all the required libraries are installed. You can install them using pip:
+```
+pip install multiprocessing os pdfplumber bibtexparser json logging
+```
+
+2. Place your PDF files in the `./papers` directory.
+
+3. Run the script:
+```
+python main.py
+```
+
+4. The script will process all PDF files in the `./papers` directory, extract text and metadata, validate the metadata, split the text into chunks, create embeddings for each chunk, and store the embeddings in a database.
+
+5. You can then use the stored embeddings for semantic search.
+
+## Note
+
+This project uses multiprocessing to process multiple PDF files simultaneously. The number of processes is equal to the number of CPUs on your machine.
+
+The project also uses logging to log errors and warnings. The log file is `app.log`.
+
+The project assumes that the BibTeX citations for the papers are stored in a `.bib` file in the `./papers` directory. The BibTeX citations are used as part of the metadata for each chunk of text.
+
+The project uses the `PythonCodeTextSplitter` class to split the text into chunks. The size of the chunks and the overlap between chunks can be configured in the `global_var.py` file.
+
+The project uses the `Chroma` class to store the embeddings. The embeddings are stored in a directory named `db`.
