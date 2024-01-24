@@ -1,69 +1,134 @@
 import os
 import streamlit as st
-import bibtexparser  # Import bibtexparser
+import bibtexparser
 
 from embedding import create_embedding
 from global_var import chunk, overlap
-
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import PythonCodeTextSplitter
 from langchain.vectorstores import Chroma
 
-# Function to get bibtex citations
-import bibtexparser
+PAPERS_DIR = "./papers"
 
-def get_bibtex_citations(bibtex_file):
+def load_bibtex_citations():
+    bibtex_file = os.path.join(PAPERS_DIR, 'citations.bib')
     with open(bibtex_file, 'r') as f:
         bibtex_str = f.read()
 
-    bib_database = bibtexparser.loads(bibtex_str)  # This line changes
+    bib_database = bibtexparser.loads(bibtex_str)
     return {entry['ID']: entry for entry in bib_database.entries}
 
 def open_pdf_at_page(pdf_path, page_number):
-    """Open a PDF at a specific page using evince."""
-    os.system(f"evince --page-label={page_number} {pdf_path}.pdf")
+    # Enclose the path in quotes to handle spaces and special characters
+    safe_path = f'"{pdf_path}"'
 
-# Load bibtex citations
-PAPERS_DIR = "./papers"
-bibtex_citations = get_bibtex_citations(os.path.join(PAPERS_DIR, 'citations.bib'))
+    # Ensure the page number is a string
+    page_str = str(page_number)
 
-# Split text into words
-python_splitter = PythonCodeTextSplitter(chunk_size=chunk, chunk_overlap=overlap)
-embeddings = create_embedding()
+    # Form the command string
+    command = f"evince --page-label={page_str} {safe_path}.pdf"
 
-db = Chroma(persist_directory='db', embedding_function=embeddings)
+    # Execute the command
+    os.system(command)
 
-st.title('Semantic Search with OpenAI and Streamlit')
+def create_chroma_db():
+    python_splitter = PythonCodeTextSplitter(chunk_size=chunk, chunk_overlap=overlap)
+    embeddings = create_embedding()
+    return Chroma(persist_directory='db', embedding_function=embeddings)
 
-# Create a text input box for the user
-prompt = st.text_input('Enter your search query')
+def display_search_results(search_results, bibtex_citations):
+    for index, result in enumerate(search_results):
+        paper_name = result[0].metadata['paper_name']
+        page_num = result[0].metadata['page_num']
+        unique_button_key = f"{paper_name}_{page_num}_{index}"
 
-if prompt:
-    search = db.similarity_search_with_score(prompt, k=10)
-    search.sort(key=lambda x: x[1], reverse=True)
-    for index, i in enumerate(search):
-        st.write("Paper Name: " + i[0].metadata['paper_name'])
-        st.write("Page Number: " + str(i[0].metadata['page_num']))
-        st.write("Content:" + i[0].page_content)
-        st.write("Relevance:" + str(i[1]))
+        st.write(f"Paper Name: {paper_name}")
+        st.write(f"Page Number: {page_num}")
+        st.write(f"Content: {result[0].page_content}")
+        st.write(f"Relevance: {result[1]}")
 
-        # Form a unique button key by adding index
-        unique_button_key = f"{i[0].metadata['paper_name']}_{i[0].metadata['page_num']}_{index}"
+        if st.button(f'Open {paper_name} at page {page_num}', key=unique_button_key):
+            open_pdf_at_page(os.path.join(PAPERS_DIR, paper_name), page_num)
 
-        if st.button(f'Open {i[0].metadata["paper_name"]} at page {i[0].metadata["page_num"]}', key=unique_button_key):
-            open_pdf_at_page(os.path.join(PAPERS_DIR, i[0].metadata['paper_name']), i[0].metadata['page_num'])
-        
-        # Get the bibtex citation
-        bibtex_entry = bibtex_citations.get(i[0].metadata['paper_name'], None)
-        print(bibtex_entry)  # Debugging-Ausgabe
-        if bibtex_entry:
-            from bibtexparser.bibdatabase import BibDatabase  # Import here if you want or at the top of your file
-
-            bib_database = BibDatabase()
-            bib_database.entries = [bibtex_entry]
-            bibtex_text = bibtexparser.dumps(bib_database)
-            cite_command = f"\\cite[p.~{i[0].metadata['page_num']}]{i[0].metadata['paper_name']}"  # Defining cite_command here
-#            st.text_area(f"BibTeX Citation for {i[0].metadata['paper_name']}", bibtex_text, height=200, key=f"bibtex_{unique_button_key}")
-            st.write(f"LaTeX Citation: {cite_command}")  # Using cite_command here
+        display_bibtex_citation(bibtex_citations, paper_name, page_num, unique_button_key)
 
         st.write('------------------')
+
+def display_bibtex_citation(bibtex_citations, paper_name, page_num, unique_button_key):
+    bibtex_entry = bibtex_citations.get(paper_name, None)
+    if bibtex_entry:
+        from bibtexparser.bibdatabase import BibDatabase
+
+        bib_database = BibDatabase()
+        bib_database.entries = [bibtex_entry]
+        bibtex_text = bibtexparser.dumps(bib_database)
+        cite_command = f"\\cite[p.~{page_num}]{paper_name}"
+
+        st.write(f"LaTeX Citation: {cite_command}")
+
+
+import pyperclip
+
+def convert_ready_for_send(prompt, search_results, result_gpt3):
+    string_to_send = ""
+    string_to_send += "Frage: "
+    string_to_send += str(prompt)
+    string_to_send += "MATERIAL START: "
+    string_to_send += str(result_gpt3)
+    string_to_send += "MATERIAL END: "
+    index = 0
+    for result in search_results:
+        string_to_send += "\nMATERIAL " + str(index) +  "START: \n" 
+        string_to_send += str(result[0].page_content)
+        string_to_send += "\nMATERIAL" + str(index) + " END\n"
+        index += 1
+    return string_to_send
+
+
+from openai import OpenAI
+# Initialisieren des GPT-3-Modells
+client = OpenAI()
+
+def generate_response(text, Instruction):
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": Instruction},
+            {"role": "user", "content": text}
+        ]
+    )
+
+    # Extrahieren Sie den Text der Antwort auf die korrekte Weise
+    # Hier wird angenommen, dass 'message' ein Attribut des Objekts ist
+    response_text = completion.choices[0].message.content
+    return response_text
+
+# import pdb
+import streamlit as st
+
+def main():
+    st.title('Semantic Search with OpenAI and Streamlit')
+
+    # Initialize session state variables if they don't exist
+    if 'search_results' not in st.session_state:
+        st.session_state['search_results'] = []
+    if 'bibtex_citations' not in st.session_state:
+        st.session_state['bibtex_citations'] = load_bibtex_citations()
+    if 'db' not in st.session_state:
+        st.session_state['db'] = create_chroma_db()
+
+    prompt = st.text_input('Enter your search query')
+
+    if st.button('Generate'):
+        result_gpt = generate_response(prompt, "")
+        search_results = st.session_state['db'].similarity_search_with_score(result_gpt, k=3)
+        search_results.sort(key=lambda x: x[1], reverse=True)
+        st.session_state['search_results'] = search_results
+        pyperclip.copy(convert_ready_for_send(prompt, search_results, result_gpt))
+
+    # Display search results if they exist
+    if st.session_state['search_results']:
+        display_search_results(st.session_state['search_results'], st.session_state['bibtex_citations'])
+
+if __name__ == "__main__":
+    main()
