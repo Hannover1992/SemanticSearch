@@ -120,11 +120,11 @@ def main():
     prompt = st.text_input('Enter your search query')
 
     if st.button('Generate'):
-        result_gpt = generate_response(prompt, "")
-        search_results = st.session_state['db'].similarity_search_with_score(result_gpt, k=3)
+        # result_gpt = generate_response(prompt, "")
+        search_results = st.session_state['db'].similarity_search_with_score(prompt, k=3)
         search_results.sort(key=lambda x: x[1], reverse=True)
         st.session_state['search_results'] = search_results
-        pyperclip.copy(convert_ready_for_send(prompt, search_results, result_gpt))
+        pyperclip.copy(convert_ready_for_send(prompt, search_results, prompt))
 
     # Display search results if they exist
     if st.session_state['search_results']:

@@ -1,33 +1,41 @@
 # Semantic Search Engine for Academic Papers
 
-This project is a Semantic Search Engine for Academic Papers. It extracts text and metadata from PDF files of academic papers, validates the metadata, splits the text into chunks, and creates embeddings for each chunk. The embeddings are then stored in a database for semantic search.
+This project provides a semantic search engine tailored for academic papers. It extracts text and metadata from PDFs, creates embeddings, and stores them in a local database for efficient semantic search.
 
-## How to Run
+## Quick Start
 
-1. Ensure that all the required libraries are installed. You can install them using pip:
-```
-pip install multiprocessing os pdfplumber bibtexparser json logging
-```
+1. **Install:** `pip install -r requirements.txt`
+2. **Prepare:** Place PDFs in `./papers` and BibTeX citations (if available) in the same directory.
+3. **Create Database:** `python create_db.py`
+4. **Run App:** `streamlit run app.py`
+5. **Search:** Enter text in the app, click 'Generate', and use 'Open' to view results.
 
-2. Place your PDF files in the `./papers` directory.
+## Features
 
-3. Run the script:
-```
-python main.py
-```
+- **PDF Processing:** Extracts text and metadata from PDFs.
+- **Database Integration:** Stores embeddings in a local database for fast retrieval.
+- **Semantic Search:** Employs advanced algorithms to understand search queries and find relevant papers.
+- **User-friendly Interface:** Streamlit-based app for easy interaction.
 
-4. The script will process all PDF files in the `./papers` directory, extract text and metadata, validate the metadata, split the text into chunks, create embeddings for each chunk, and store the embeddings in a database.
+## Code Structure
 
-5. You can then use the stored embeddings for semantic search.
+- `db/`: Database storage
+- `papers/`: PDF storage
+- `txt/`: Temporary text storage
+- `app.log`: Error and operation logs
 
-## Note
+- `append_db.py`: Add data to the database.
+- `convert_txt_to_pdf.sh`: Convert text back to PDF (Bash script).
+- `create_db.py`: Initialize the database.
+- `embedding.py`: Create embeddings.
+- `global_var.py`: Configuration settings.
+- `load_db.py`: Load data from the database.
+- `test.py`: Testing module.
 
-This project uses multiprocessing to process multiple PDF files simultaneously. The number of processes is equal to the number of CPUs on your machine.
+## Additional Notes
 
-The project also uses logging to log errors and warnings. The log file is `app.log`.
+- Multiprocessing for efficient PDF processing.
+- Logging for error tracking.
+- Configurable chunk size and overlap in `global_var.py`.
 
-The project assumes that the BibTeX citations for the papers are stored in a `.bib` file in the `./papers` directory. The BibTeX citations are used as part of the metadata for each chunk of text.
-
-The project uses the `PythonCodeTextSplitter` class to split the text into chunks. The size of the chunks and the overlap between chunks can be configured in the `global_var.py` file.
-
-The project uses the `Chroma` class to store the embeddings. The embeddings are stored in a directory named `db`.
+For detailed information, refer to the comments within the code.

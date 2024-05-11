@@ -33,9 +33,12 @@ def extract_text_from_pdf_with_metadata(pdf_path, bibtex_citations):
             bibtex_citation = bibtex_citations.get(paper_name, {})
             if not bibtex_citation:
                 logging.warning(f"No BibTeX citation found for {paper_name}")
+            # Page Number wird ausgerechnet und dann Max von 0 und Page Number. 
+            page_num = page_num - 1
+            page_num = max(0, page_num)
             metadata = {
                 'paper_name': paper_name,
-                'page_num': page_num + 1,
+                'page_num': page_num,
                 'full_path': pdf_path,
                 'bibtex_citation': bibtex_citation
             }
