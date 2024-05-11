@@ -1,0 +1,8 @@
+pdfplumber
+bibtexparser
+langchain
+sentence-transformers
+chromadb
+streamlit
+pyperclip
+openai
